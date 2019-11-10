@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{1A9B8011-3CC5-4BDA-BD3A-183150C25254}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Net</RootNamespace>
+    <AssemblyName>Core</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ConsolePause>false</ConsolePause>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ConsolePause>false</ConsolePause>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="NetSocket.cs" />
+    <Compile Include="StateObject.cs" />
+    <Compile Include="Event\INetEvent.cs" />
+    <Compile Include="Event\INetEventObject.cs" />
+    <Compile Include="Utility\NetDebug.cs" />
+    <Compile Include="Connection\TCP\TCPServer.cs" />
+    <Compile Include="Connection\TCP\TCPClient.cs" />
+    <Compile Include="Connection\TCP\TCPConnection.cs" />
+    <Compile Include="Connection\TCP\Server\CSConnection.cs" />
+    <Compile Include="Setting\INetSetting.cs" />
+    <Compile Include="Setting\TCPSetting.cs" />
+    <Compile Include="Utility\NetDefine.cs" />
+    <Compile Include="Utility\NetExtends.cs" />
+    <Compile Include="Utility\NetUtility.cs" />
+    <Compile Include="RawMessage.cs" />
+    <Compile Include="Connection\TCP\Server\ConnectionMessage.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Connection\" />
+    <Folder Include="Event\" />
+    <Folder Include="Utility\" />
+    <Folder Include="Connection\TCP\" />
+    <Folder Include="Connection\TCP\Server\" />
+    <Folder Include="Setting\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+</Project>
