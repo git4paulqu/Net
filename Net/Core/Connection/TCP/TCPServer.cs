@@ -40,6 +40,11 @@ namespace Net.TCP
             Socket connectSocket = null;
             try
             {
+                if (null == socket)
+                {
+                    return;
+                }
+
                 lock (socket)
                 {
                     connectSocket = socket.EndAccept(ar);

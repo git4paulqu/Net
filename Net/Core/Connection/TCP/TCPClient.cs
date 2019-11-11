@@ -80,6 +80,15 @@ namespace Net.TCP
             onDisConnectCallback.SafeInvoke(null);
         }
 
+        protected override void ResetSocket()
+        {
+            if (null != socket)
+            {
+                socket.Shutdown(SocketShutdown.Both);
+            }
+            base.ResetSocket();
+        }
+
         public bool connected
         {
             get

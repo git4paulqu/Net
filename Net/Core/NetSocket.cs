@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace Net
 {
@@ -21,11 +22,7 @@ namespace Net
 
         protected virtual void OnClose()
         {
-            if (null != socket)
-            {
-                socket.Close();
-                socket = null;
-            }
+            ResetSocket();
 
             if (null != state)
             {
@@ -117,7 +114,7 @@ namespace Net
             }
             catch (Exception ex)
             {
-                NetDebug.Log("[NetSocket] BeginSendCallback, error: {0}.", ex.ToString());
+                NetDebug.Log("[NetSocket] BeginSendCallback, error: {0}.", ex.Message.ToString());
             }
         }
 
@@ -136,7 +133,7 @@ namespace Net
             }
             catch (Exception ex)
             {
-                NetDebug.Log("[NetSocket] BeginSendToCallback, error: {0}.", ex.ToString());
+                NetDebug.Log("[NetSocket] BeginSendToCallback, error: {0}.", ex.Message.ToString());
             }
         }
 
@@ -145,20 +142,34 @@ namespace Net
             StateObject so = (StateObject)ar.AsyncState;
             try
             {
-                int read = socket.EndReceive(ar);
-                if (read == 0)
+                if (null == socket)
                 {
-                    Close();
                     return;
                 }
 
-                RawMessage message = ReadMessage(so, read);
+                int read = 0;
+                lock (socket)
+                {
+                    read = socket.EndReceive(ar);
+                    if (read == 0)
+                    {
+                        Close();
+                        return;
+                    }
+                }
+
+                RawMessage message = null;
+                lock (state)
+                {
+                    message = ReadMessage(so, read);
+                }
+                
                 BeginRecevieFrom();
                 OnBeginRecevieCallback(message);
             }
             catch (Exception ex)
             {
-                NetDebug.Log("[NetSocket] BeginRecevieCallback error:{0}.", ex.ToString());
+                NetDebug.Log("[NetSocket] BeginRecevieCallback error:{0}.", ex.Message.ToString());
             }
         }
 
@@ -167,14 +178,24 @@ namespace Net
             StateObject so = (StateObject)ar.AsyncState;
             try
             {
-                int read = socket.EndReceiveFrom(ar, ref remoterPoint);
-                RawMessage message = ReadMessage(so, read);
+                int read = 0;
+                lock (socket)
+                {
+                    socket.EndReceiveFrom(ar, ref remoterPoint);
+                }
+
+                RawMessage message = null;
+                lock (state)
+                {
+                    ReadMessage(so, read);
+                }
+                
                 BeginRecevieFrom();
                 OnBeginReceiveFromCallbak((IPEndPoint)remoterPoint, message);
             }
             catch (Exception ex)
             {
-                NetDebug.Log("[NetSocket] BeginRecevieFromCallback error:{0}.", ex.ToString());
+                NetDebug.Log("[NetSocket] BeginRecevieFromCallback error:{0}.", ex.Message.ToString());
             }
         }
 
@@ -182,9 +203,13 @@ namespace Net
 
         protected virtual void Reset()
         {
+            ResetSocket();
+        }
+
+        protected virtual void ResetSocket()
+        {
             if (null != socket)
             {
-                socket.Shutdown(SocketShutdown.Both);
                 socket.Close();
                 socket = null;
             }
