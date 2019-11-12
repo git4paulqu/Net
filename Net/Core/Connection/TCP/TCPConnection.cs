@@ -14,6 +14,7 @@ namespace Net.TCP
             }
 
             this.setting = setting;
+            Initialize(this.setting.ioNum);
         }
 
         protected virtual void OnReceiveCallback(RawMessage message)
@@ -21,9 +22,26 @@ namespace Net.TCP
             onReceiveCallback.SafeInvoke(message);
         }
 
-        protected sealed override void OnBeginRecevieCallback(RawMessage message)
+        protected sealed override void OnReceiveAsyncCallback(RawMessage message)
         {
             OnReceiveCallback(message);
+        }
+
+        protected override bool IsCanSend()
+        {
+            return connected;
+        }
+
+        public bool connected
+        {
+            get
+            {
+                if (null == socket)
+                {
+                    return false;
+                }
+                return socket.Connected;
+            }
         }
 
         public NetRecevieEventCallback onReceiveCallback { get; set; }

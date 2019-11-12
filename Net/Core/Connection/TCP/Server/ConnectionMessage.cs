@@ -4,11 +4,11 @@ namespace Net.TCP.Server
 {
     public class ConnectionMessage : INetEventObject
     {
-        public ConnectionMessage(Socket socket)
+        public ConnectionMessage(string remote)
         {
-            this.socket = socket;
+            this.remote = remote;
         }
 
-        public Socket socket;
+        public string remote;
     }
 }

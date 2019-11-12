@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -30,8 +30,15 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Connection\TCP\Server\ClientDroppedMessage.cs" />
+    <Compile Include="Container\ThreadSafedQueue.cs" />
+    <Compile Include="Container\ThreadSafedStack.cs" />
+    <Compile Include="NetSocket.Callback.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="NetSocket.cs" />
+    <Compile Include="SAEA\SAEA.cs" />
+    <Compile Include="SAEA\SAEABuffer.cs" />
+    <Compile Include="SAEA\SAEAPool.cs" />
     <Compile Include="StateObject.cs" />
     <Compile Include="Event\INetEvent.cs" />
     <Compile Include="Event\INetEventObject.cs" />
@@ -48,13 +55,6 @@
     <Compile Include="RawMessage.cs" />
     <Compile Include="Connection\TCP\Server\ConnectionMessage.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Connection\" />
-    <Folder Include="Event\" />
-    <Folder Include="Utility\" />
-    <Folder Include="Connection\TCP\" />
-    <Folder Include="Connection\TCP\Server\" />
-    <Folder Include="Setting\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

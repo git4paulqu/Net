@@ -12,6 +12,7 @@ namespace Net.Test.TCP
             client = new TCPClient(clientSetting);
             client.onConnectCallback += OnConnected;
             client.onConnectFailedCallback += OnConnectedFail;
+            client.onDisConnectCallback += OnDisConnectCallback;
             client.onReceiveCallback += OnRevecie;
             client.Connect();
         }
@@ -25,6 +26,10 @@ namespace Net.Test.TCP
         private void OnConnected(INetEventObject message)
         {
             Util.ClientLog("Client:{0} OnConnected", uid);
+
+            string content = string.Format("hello form {0}.", uid);
+            byte[] data = System.Text.Encoding.Default.GetBytes(content);
+            client.Send(data);
         }
 
         private void OnConnectedFail(INetEventObject message)
@@ -32,9 +37,17 @@ namespace Net.Test.TCP
             Util.ClientLog("Client:{0} OnConnectedFail", uid);
         }
 
+        private void OnDisConnectCallback(INetEventObject message)
+        {
+            Util.ClientLog("Client:{0} OnDisConnect", uid);
+        }
+
         private void OnRevecie(RawMessage rawMessage)
         {
+            string remote = (string)rawMessage.data;
+            string content = System.Text.Encoding.Default.GetString(rawMessage.buffer);
 
+            Util.ClientLog("OnRevecie from:{0} content:{1}", remote, content);
         }
 
         public string uid { get; set; }

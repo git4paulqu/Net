@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using Net.TCP.Server;
 
 namespace Net.TCP
 {
@@ -14,58 +16,126 @@ namespace Net.TCP
         public void Listen()
         {
             NetDebug.Log("[TCPServer] Listen.");
-            Socket listenSocket = new Socket(AddressFamily.InterNetwork,
-                                 SocketType.Stream,
-                                 ProtocolType.Tcp);
-            listenSocket.Blocking = setting.blocking;
-            listenSocket.NoDelay = setting.noDelay;
-            IPEndPoint remotePoint = NetUtility.GetIPEndPoint(setting.host, setting.port);
-            listenSocket.Bind(remotePoint);
-            listenSocket.Listen(setting.backlog);
 
-            Start(listenSocket);
-            for (int i = 0; i < setting.acceptThreadCount; i++)
+            IPEndPoint remote = NetUtility.GetIPEndPoint(setting.host, setting.port);
+            if (null == remote)
             {
-                BeginAccept();
+                NetDebug.Log("[TCPServer] ip port can not be null.");
+                return;
+            }
+
+            socket = new Socket(remote.AddressFamily,
+                                SocketType.Stream,
+                                ProtocolType.Tcp);
+            socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
+            socket.Blocking = setting.blocking;
+            socket.Bind(remote);
+            socket.Listen(setting.backlog);
+            AcceptAsync();
+        }
+
+        public void Send(string remote, byte[] data)
+        {
+            CSConnection connection = null;
+            if (!map_remote2Connection.TryGetValue(remote, out connection))
+            {
+                NetDebug.Log("[TCPServer] try send, but the remote:{0} is null.", remote);
+                return;
+            }
+            connection.Send(data);
+        }
+
+        protected override void OnSAEACompletedCallback(object sender, SocketAsyncEventArgs saea)
+        {
+            switch (saea.LastOperation)
+            {
+                case SocketAsyncOperation.Accept:
+                    AcceptAsyncCallback(saea);
+                    break;
             }
         }
 
-        private void BeginAccept()
+        protected virtual void AcceptAsync()
         {
-            socket.BeginAccept(BeginAcceptCallback, null);
+            SocketAsyncEventArgs saea = new SocketAsyncEventArgs();
+            saea.Completed += new EventHandler<SocketAsyncEventArgs>(OnSAEACompleted);
+
+            bool willRaiseEvent = socket.AcceptAsync(saea);
+            if (!willRaiseEvent)
+            {
+                AcceptAsyncCallback(saea);
+            }
         }
 
-        private void BeginAcceptCallback(IAsyncResult ar)
+        private void AcceptAsyncCallback(SocketAsyncEventArgs saea)
         {
-            Socket connectSocket = null;
             try
             {
-                if (null == socket)
+                if (saea.SocketError == SocketError.Success)
                 {
-                    return;
+                    OnAcceptCallback(saea.AcceptSocket);
                 }
-
-                lock (socket)
-                {
-                    connectSocket = socket.EndAccept(ar);
-                    OnAcceptCallback(connectSocket);
-                }
-
-                BeginAccept();
+                AcceptAsync();
             }
             catch (Exception ex)
             {
-                NetDebug.Log("[TCPServer] BeginAcceptCallback, error: {0}.", ex.ToString());
+                NetDebug.Error("[TCPServer] AcceptAsyncCallback error:{0}.", ex.Message.ToString());
             }
+        }
+
+        private void OnConnectionRecevie(RawMessage message)
+        {
+            onReceiveCallback.SafeInvoke(message);
         }
 
         private void OnAcceptCallback(Socket socket)
         {
-            Server.ConnectionMessage message = new Server.ConnectionMessage(socket);
+            TryInitConnection(socket);
+            Server.ConnectionMessage message = new Server.ConnectionMessage(socket.RemoteEndPoint.ToString());
             onConnectionConnect(message);
+        }
+
+        private void TryInitConnection(Socket socket)
+        {
+            if (null == socket)
+            {
+                return;
+            }
+
+            string remote = socket.RemoteEndPoint.ToString();
+            if (!map_remote2Connection.ContainsKey(remote))
+            {
+                CSConnection connection = new CSConnection(socket, OnConnectionRecevie);
+                map_remote2Connection.Add(remote, connection);
+            }
+        }
+
+        private void TryRemoveConnection(Socket socket)
+        {
+            if (null == socket)
+            {
+                return;
+            }
+
+            string remote = socket.RemoteEndPoint.ToString();
+            CSConnection connection = null;
+            if (map_remote2Connection.TryGetValue(remote, out connection))
+            {
+                if (null != connection)
+                {
+                    connection.Close();
+                }
+                map_remote2Connection.Remove(remote);
+
+                ClientDroppedMessage message = new ClientDroppedMessage();
+                message.remote = remote;
+                onConnectionDropped.SafeInvoke(message);
+            }
         }
 
         public NetEventCallback onConnectionConnect { get; set; }
         public NetEventCallback onConnectionDropped { get; set; }
+
+        private Dictionary<string, CSConnection> map_remote2Connection = new Dictionary<string, CSConnection>();
     }
 }

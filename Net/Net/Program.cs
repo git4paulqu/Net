@@ -9,6 +9,7 @@ namespace Net
             try
             {
                 TCPTest.Start();
+                InputHandle.Start();
             }
             catch (Exception ex)
             {

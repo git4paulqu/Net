@@ -14,19 +14,48 @@ namespace Net.TCP
         public void Connect()
         {
             NetDebug.Log("[TCPClient] Try to Connect {0}:{1}.", setting.host, setting.port);
-            BeginConnect();
+
+            Reset();
+            ConnetAsync();
         }
 
-        protected virtual void BeginConnect()
+        public void Send(byte[] data)
         {
-            Reset();
+            SendAsync(data);
+        }
 
-            Socket connectSocket = new Socket(AddressFamily.InterNetwork,
-                                 SocketType.Stream,
-                                 ProtocolType.Tcp);
-            connectSocket.Blocking = setting.blocking;
-            connectSocket.NoDelay = setting.noDelay;
+        protected override void OnClose()
+        {
+            base.OnClose();
+        }
 
+        protected override void ResetSocket()
+        {
+            if (null != socket)
+            {
+                socket.Shutdown(SocketShutdown.Both);
+            }
+            base.ResetSocket();
+        }
+
+        protected override void OnRecevieFaild(Socket socket)
+        {
+            base.OnRecevieFaild(socket);
+            Close();
+        }
+
+        protected override void OnSAEACompletedCallback(object sender, SocketAsyncEventArgs saea)
+        {
+            switch (saea.LastOperation)
+            {
+                case SocketAsyncOperation.Connect:
+                    ConnectAsyncCallback(saea);
+                    break;
+            }
+        }
+
+        private void ConnetAsync()
+        {
             IPEndPoint remote = NetUtility.GetIPEndPoint(setting.host, setting.port);
             if (null == remote)
             {
@@ -34,22 +63,39 @@ namespace Net.TCP
                 return;
             }
 
-            connectSocket.BeginConnect(remote, BeginConnectCallback, connectSocket);
+            socket = new Socket(remote.AddressFamily,
+                                              SocketType.Stream,
+                                              ProtocolType.Tcp);
+            socket.Blocking = setting.blocking;
+            socket.NoDelay = setting.noDelay;
+
+            SocketAsyncEventArgs saea = new SocketAsyncEventArgs();
+            saea.Completed += new EventHandler<SocketAsyncEventArgs>(OnSAEACompleted);
+            saea.AcceptSocket = socket;
+            saea.RemoteEndPoint = remote;
+
+            bool willRaiseEvent = socket.ConnectAsync(saea);
+            if (!willRaiseEvent)
+            {
+                ConnectAsyncCallback(saea);
+            }
         }
 
-        private void BeginConnectCallback(IAsyncResult ar)
+        private void ConnectAsyncCallback(SocketAsyncEventArgs saea)
         {
             try
             {
-                Socket connectSocket = ar.AsyncState as Socket;
-                lock (connectSocket)
+                if (saea.SocketError == SocketError.Success)
                 {
-                    connectSocket.EndConnect(ar);
+                    OnConnectCallback(true, saea.AcceptSocket);
+                    saea.AcceptSocket = null;
                 }
-
-                OnConnectCallback(connectSocket.Connected, connectSocket);
+                else
+                {
+                    OnConnectCallback(false, null);
+                }
             }
-            catch (SocketException ex)
+            catch (Exception ex)
             {
                 NetDebug.Error("[TCPClient] conncet callback error:{0}.", ex.Message.ToString());
                 OnConnectCallback(false, null);
@@ -65,45 +111,12 @@ namespace Net.TCP
 
             if (connect)
             {
-                Start(connectSocket);
-                BeginRecevie();
+                ReceiveAsync();
                 onConnectCallback(null);
                 return;
             }
 
             onConnectFailedCallback(null);
-        }
-
-        protected override void OnClose()
-        {
-            base.OnClose();
-            onDisConnectCallback.SafeInvoke(null);
-        }
-
-        protected override void ResetSocket()
-        {
-            if (null != socket)
-            {
-                socket.Shutdown(SocketShutdown.Both);
-            }
-            base.ResetSocket();
-        }
-
-        public bool connected
-        {
-            get
-            {
-                if (null == socket)
-                {
-                    return false;
-                }
-                return socket.Connected;
-            }
-        }
-
-        protected override bool IsCanSend()
-        {
-            return connected;
         }
 
         public NetEventCallback onConnectCallback { get; set; }

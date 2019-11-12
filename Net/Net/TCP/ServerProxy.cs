@@ -22,19 +22,22 @@ namespace Net.Test.TCP
         private void OnAccepted(INetEventObject message)
         {
             Net.TCP.Server.ConnectionMessage connectionMessage = message as Net.TCP.Server.ConnectionMessage;
-            Util.ServerLog("Accepted form:{0}", connectionMessage.socket.RemoteEndPoint.ToString());
+            Util.ServerLog("Accepted form:{0}", connectionMessage.remote);
         }
 
         private void OnConnectionDropped(INetEventObject message)
         {
             Net.TCP.Server.ConnectionMessage connectionMessage = message as Net.TCP.Server.ConnectionMessage;
-            Util.ServerLog("OnConnectionDropped form:{0}", connectionMessage.socket.RemoteEndPoint.ToString());
+            Util.ServerLog("OnConnectionDropped form:{0}", connectionMessage.remote.ToString());
         }
 
-
-        private static void OnRevecie(RawMessage rawMessage)
+        private void OnRevecie(RawMessage rawMessage)
         {
+            string remote = (string)rawMessage.data;
+            string content = System.Text.Encoding.Default.GetString(rawMessage.buffer);
 
+            Util.ServerLog("OnRevecie from:{0} content:{1}", remote, content);
+            server.Send(remote, rawMessage.buffer);
         }
 
         TCPServer server;
