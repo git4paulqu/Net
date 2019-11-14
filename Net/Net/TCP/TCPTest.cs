@@ -8,7 +8,6 @@ namespace Net
     {
         public static void Start()
         {
-
             Util.Log("=============TCP START=============");
 
             server = new ServerProxy();

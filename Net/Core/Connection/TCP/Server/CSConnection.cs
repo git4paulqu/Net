@@ -2,9 +2,9 @@
 
 namespace Net.TCP.Server
 {
-    public class CSConnection : NetSocket
+    public class CSConnection : TCPConnection
     {
-        public CSConnection(Socket socket, NetRecevieEventCallback recevieEventCallback)
+        public CSConnection(Socket socket, NetRecevieEventCallback recevieEventCallback) : base (socket)
         {
             this.socket = socket;
             socket.Blocking = false;
@@ -21,8 +21,6 @@ namespace Net.TCP.Server
 
         protected override void OnReceiveAsyncCallback(RawMessage message)
         {
-            base.OnReceiveAsyncCallback(message);
-
             message.data = remote;
             recevieEventCallback.SafeInvoke(message);
         }

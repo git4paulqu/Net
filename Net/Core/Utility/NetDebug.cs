@@ -13,5 +13,7 @@ namespace Net
         {
             Console.WriteLine("[NET ERROR] " + string.Format(format, arg));
         }
+
+        private static object lockObj = new object();
     }
 }

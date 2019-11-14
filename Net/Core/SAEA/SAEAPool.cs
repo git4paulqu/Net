@@ -5,57 +5,80 @@ namespace Net
 {
     public class SAEAPool
     {
-        public SAEAPool(int ioNum, EventHandler<SocketAsyncEventArgs> callback)
+        public SAEAPool(int ioNum,
+                        EventHandler<SocketAsyncEventArgs> callback,
+                        int bufferSize = NetDefine.DEFAUT_BUFFER_SIZE)
         {
             saeaCallback = callback;
-            pool = new ThreadSafedStack<SAEA>();
-            buffer = new SAEABuffer(ioNum);
+            pool = new ThreadSafedStack<SocketAsyncEventArgs>();
+            buffer = new SAEABuffer(ioNum, bufferSize);
         }
 
-        public SAEA Alloc()
+        public SocketAsyncEventArgs Alloc()
         {
-            SAEA saea;
+            SocketAsyncEventArgs saea;
             if (!pool.TryPop(out saea))
             {
                 saea = InitSAEA();
             }
 
-            buffer.Bind(saea.data);
+            buffer.Bind(saea);
             return saea;
         }
 
-        public void Recycle(SAEA saea)
+        public void Recycle(SocketAsyncEventArgs saea)
         {
-            buffer.UnBind(saea.data);
+            buffer.UnBind(saea);
             if (null != pool)
             {
                 pool.Push(saea);
             }
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             int count = pool.Count;
             for (int i = 0; i < count; i++)
             {
-                SAEA item = null;
+                SocketAsyncEventArgs item = null;
                 if (pool.TryPop(out item))
                 {
                     item.Dispose();
                 }
             }
             pool.Clear();
+
+            if (null != buffer)
+            {
+                buffer.Dispose();
+            }
+
+            buffer = null;
             pool = null;
+            saeaCallback = null;
         }
 
-        private SAEA InitSAEA()
+        private SocketAsyncEventArgs InitSAEA()
         {
-            SAEA saea = new SAEA(saeaCallback);
+            SocketAsyncEventArgs saea = new SocketAsyncEventArgs();
+            saea.Completed += saeaCallback;
             return saea;
         }
 
-        private ThreadSafedStack<SAEA> pool;
-        private SAEABuffer buffer;
+        public int count
+        {
+            get
+            {
+                if (null == pool)
+                {
+                    return 0;
+                }
+                return pool.Count;
+            }
+        }
+
+        private ThreadSafedStack<SocketAsyncEventArgs> pool;
         private EventHandler<SocketAsyncEventArgs> saeaCallback;
+        public SAEABuffer buffer;
     }
 }

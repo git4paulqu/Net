@@ -17,14 +17,58 @@ namespace Net.TCP
             Initialize(this.setting.ioNum);
         }
 
-        protected virtual void OnReceiveCallback(RawMessage message)
+        public TCPConnection(Socket socket)
+        {
+            this.socket = socket;
+            Initialize(NetDefine.DEFAUT_IONUM);
+        }
+
+        protected override void OnReceiveAsyncCallback(RawMessage message)
         {
             onReceiveCallback.SafeInvoke(message);
         }
 
-        protected sealed override void OnReceiveAsyncCallback(RawMessage message)
+        protected override bool OnSend(byte[] buffer, int offset, int count, byte[] data, out int packCount)
         {
-            OnReceiveCallback(message);
+            int MESSAGE_LENGTH_SIZE = NetDefine.MESSAGE_LENGTH_SIZE;
+            byte[] length = System.BitConverter.GetBytes(data.Length);
+            System.Buffer.BlockCopy(length, 0, buffer, offset, MESSAGE_LENGTH_SIZE);
+            System.Buffer.BlockCopy(data, 0, buffer, offset + MESSAGE_LENGTH_SIZE, count);
+            packCount = count + MESSAGE_LENGTH_SIZE;
+            return true;
+        }
+
+        protected override bool OnReceive(byte[] buffer, int offset, int count, out int error)
+        {
+            error = 0;
+            receiveBuffer.Copy(buffer, offset, count);
+
+            int MESSAGE_LENGTH_SIZE = NetDefine.MESSAGE_LENGTH_SIZE;
+            while (receiveBuffer.dataLength > MESSAGE_LENGTH_SIZE)
+            {
+                int contentLength = System.BitConverter.ToInt32(receiveBuffer.buffer, 0);
+
+                if ((contentLength < 0) ||
+                    (contentLength > NetDefine.MAX_MESSAGE_LENGTH) ||
+                    (receiveBuffer.dataLength > NetDefine.MAX_MESSAGE_LENGTH))
+                {
+                    error = 1;
+                    return false;
+                }
+
+                if ((receiveBuffer.dataLength - MESSAGE_LENGTH_SIZE) >= contentLength)
+                {
+                    RawMessage message = RawMessage.Clone(receiveBuffer.buffer, MESSAGE_LENGTH_SIZE, contentLength);
+                    OnReceiveAsyncCallback(message);
+                    receiveBuffer.Clear(MESSAGE_LENGTH_SIZE + contentLength);
+                }
+                else
+                {
+                    return true;
+                }
+            }
+
+            return true;
         }
 
         protected override bool IsCanSend()

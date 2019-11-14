@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 
 namespace Net
 {
@@ -12,19 +11,39 @@ namespace Net
             OnClose();
         }
 
-        protected void Initialize(int ioNum)
+        protected void Initialize(int ioNum, int bufferSize = NetDefine.DEFAUT_BUFFER_SIZE)
         {
-            saeaPool = new SAEAPool(ioNum, new EventHandler<SocketAsyncEventArgs>(OnSAEACompleted));
+            sendSAEAPool = new SAEAPool(ioNum, 
+                                        new EventHandler<SocketAsyncEventArgs>(OnSAEACompleted),
+                                        bufferSize);
+
+            receiveSAEAPool = new SAEAPool(ioNum,
+                                           new EventHandler<SocketAsyncEventArgs>(OnSAEACompleted),
+                                           bufferSize);
+
+            receiveBuffer = new DynamicBuffer(ioNum * bufferSize);
         }
 
         protected virtual void OnClose()
         {
             ResetSocket();
 
-            if (null != saeaPool)
+            if (null != sendSAEAPool)
             {
-                saeaPool.Dispose();
-                saeaPool = null;
+                sendSAEAPool.Dispose();
+                sendSAEAPool = null;
+            }
+
+            if (null != receiveSAEAPool)
+            {
+                receiveSAEAPool.Dispose();
+                receiveSAEAPool = null;
+            }
+
+            if (null != receiveBuffer)
+            {
+                receiveBuffer.Dispose();
+                receiveBuffer = null;
             }
         }
 
@@ -48,6 +67,18 @@ namespace Net
             ResetSocket();
         }
 
+        protected virtual bool OnSend(byte[] buffer, int offset, int count, byte[] data, out int packCount)
+        {
+            packCount = count;
+            return false;
+        }
+
+        protected virtual bool OnReceive(byte[] buffer, int offset, int count, out int error)
+        {
+            error = 0;
+            return false;
+        }
+
         protected virtual void ResetSocket()
         {
             CloseSocket(socket);
@@ -59,11 +90,14 @@ namespace Net
             return false;
         }
 
-        private void CloseSocket(SocketAsyncEventArgs saea)
+        protected virtual void CloseSAEA(SocketAsyncEventArgs saea, SAEAPool pool = null)
         {
-            OnClose();
             CloseSocket(saea.AcceptSocket);
-            CloseSAEA(saea);
+            if (null != pool)
+            {
+                pool.Recycle(saea);
+            }
+            OnClose();
         }
 
         private void CloseSocket(Socket closeSocket)
@@ -79,13 +113,10 @@ namespace Net
             catch { }
         }
 
-        private void CloseSAEA(SocketAsyncEventArgs saea)
-        {
-            saeaPool.Recycle(saea.UserToken as SAEA);
-        }
-
         protected Socket socket { get; set; }
-        protected SAEAPool saeaPool { get; private set; }
+        protected SAEAPool sendSAEAPool { get; private set; }
+        protected SAEAPool receiveSAEAPool { get; private set; }
+        protected DynamicBuffer receiveBuffer { get; private set; }
 
         private EndPoint remoterPoint = new IPEndPoint(IPAddress.Any, 0);
     }

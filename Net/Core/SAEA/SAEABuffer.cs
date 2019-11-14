@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 
 namespace Net
 {
@@ -42,9 +43,20 @@ namespace Net
             {
                 return;
             }
-
-            freePosition.Push(saea.Offset);
+            int pos = saea.Offset;
+            Array.Clear(buffer, pos, bufferSize);
+            freePosition.Push(pos);
             saea.SetBuffer(null, 0, 0);
+        }
+
+        public void Write(byte[] data, int offset, int count)
+        {
+            if (offset > totalSize || count + offset > totalSize)
+            {
+                NetDebug.Error("[SAEABuffer] write error.");
+                return;
+            }
+            Buffer.BlockCopy(data, 0, buffer, offset, count);
         }
 
         public void Dispose()
@@ -60,7 +72,19 @@ namespace Net
         private void ResetBuffer(int count)
         {
             totalSize = count;
-            buffer = new byte[totalSize];
+
+            if (null == buffer)
+            {
+                buffer = new byte[totalSize];
+                return;
+            }
+
+            lock (buffer)
+            {
+                byte[] alloc = new byte[count];
+                Buffer.BlockCopy(buffer, 0, alloc, 0, buffer.Length);
+                buffer = alloc;
+            }
         }
 
         private int position;

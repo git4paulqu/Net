@@ -4,7 +4,7 @@ namespace Net
 {
     public class RawMessage : INetEventObject
     {
-        public static RawMessage Clone(byte[] data, int start, int length)
+        public static RawMessage Clone(byte[] data, int offset, int length)
         {
             RawMessage message = new RawMessage();
             if (null == data)
@@ -15,7 +15,7 @@ namespace Net
 
             message.size = length;
             message.buffer = new byte[length];
-            Buffer.BlockCopy(data, start, message.buffer, 0, length);
+            Buffer.BlockCopy(data, offset, message.buffer, 0, length);
             return message;
         }
 

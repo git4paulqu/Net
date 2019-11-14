@@ -27,9 +27,13 @@ namespace Net.Test.TCP
         {
             Util.ClientLog("Client:{0} OnConnected", uid);
 
-            string content = string.Format("hello form {0}.", uid);
-            byte[] data = System.Text.Encoding.Default.GetBytes(content);
-            client.Send(data);
+            for (int i = 0; i < 5; i++)
+            {
+                string content = string.Format("hello form {0} - {1}.", uid, i);
+                byte[] data = System.Text.Encoding.Default.GetBytes(content);
+                client.Send(data);
+            }
+           
         }
 
         private void OnConnectedFail(INetEventObject message)
