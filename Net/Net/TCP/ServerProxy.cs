@@ -37,9 +37,13 @@ namespace Net.Test.TCP
             string content = System.Text.Encoding.Default.GetString(rawMessage.buffer);
 
             Util.ServerLog("OnRevecie from:{0} content:{1}", remote, content);
-            server.Send(remote, rawMessage.buffer);
+
+            if (TCPTest.serverReceiveSend)
+            {
+                server.Send(remote, rawMessage.buffer);
+            }
         }
 
-        TCPServer server;
+        public TCPServer server;
     }
 }

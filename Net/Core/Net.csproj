@@ -30,7 +30,6 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Connection\TCP\Server\ClientDroppedMessage.cs" />
     <Compile Include="Container\ThreadSafedQueue.cs" />
     <Compile Include="Container\ThreadSafedStack.cs" />
     <Compile Include="DynamicBuffer.cs" />

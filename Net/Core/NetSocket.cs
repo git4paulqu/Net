@@ -11,23 +11,8 @@ namespace Net
             OnClose();
         }
 
-        protected void Initialize(int ioNum, int bufferSize = NetDefine.DEFAUT_BUFFER_SIZE)
+        public void Dispose()
         {
-            sendSAEAPool = new SAEAPool(ioNum, 
-                                        new EventHandler<SocketAsyncEventArgs>(OnSAEACompleted),
-                                        bufferSize);
-
-            receiveSAEAPool = new SAEAPool(ioNum,
-                                           new EventHandler<SocketAsyncEventArgs>(OnSAEACompleted),
-                                           bufferSize);
-
-            receiveBuffer = new DynamicBuffer(ioNum * bufferSize);
-        }
-
-        protected virtual void OnClose()
-        {
-            ResetSocket();
-
             if (null != sendSAEAPool)
             {
                 sendSAEAPool.Dispose();
@@ -47,17 +32,30 @@ namespace Net
             }
         }
 
+        protected void Initialize(int ioNum, int bufferSize = NetDefine.DEFAUT_BUFFER_SIZE)
+        {
+            sendSAEAPool = new SAEAPool(ioNum, 
+                                        new EventHandler<SocketAsyncEventArgs>(OnSAEACompleted),
+                                        bufferSize);
+
+            receiveSAEAPool = new SAEAPool(ioNum,
+                                           new EventHandler<SocketAsyncEventArgs>(OnSAEACompleted),
+                                           bufferSize);
+
+            receiveBuffer = new DynamicBuffer(ioNum * bufferSize);
+        }
+
+        protected virtual void OnClose()
+        {
+            ResetSocket();
+        }
+
         protected virtual void OnReceiveAsyncCallback(RawMessage message)
         {
-
+            onReceiveCallback.SafeInvoke(message);
         }
 
         protected virtual void OnReceiveFromAsyncCallback(IPEndPoint remotePoint, RawMessage message)
-        {
-
-        }
-
-        protected virtual void OnRecevieFaild(Socket socket)
         {
 
         }
@@ -85,19 +83,16 @@ namespace Net
             socket = null;
         }
 
-        protected virtual bool IsCanSend()
-        {
-            return false;
-        }
-
         protected virtual void CloseSAEA(SocketAsyncEventArgs saea, SAEAPool pool = null)
         {
-            CloseSocket(saea.AcceptSocket);
             if (null != pool)
             {
                 pool.Recycle(saea);
             }
-            OnClose();
+
+            RawMessage message = new RawMessage();
+            message.data = remote;
+            onClosedCallback.SafeInvoke(message);
         }
 
         private void CloseSocket(Socket closeSocket)
@@ -113,11 +108,16 @@ namespace Net
             catch { }
         }
 
+        public string remote { get; protected set; }
+        protected virtual bool ready4Send { get; }
         protected Socket socket { get; set; }
         protected SAEAPool sendSAEAPool { get; private set; }
         protected SAEAPool receiveSAEAPool { get; private set; }
         protected DynamicBuffer receiveBuffer { get; private set; }
 
         private EndPoint remoterPoint = new IPEndPoint(IPAddress.Any, 0);
+
+        public NetRecevieEventCallback onReceiveCallback { get; set; }
+        public NetRecevieEventCallback onClosedCallback { get; set; }
     }
 }

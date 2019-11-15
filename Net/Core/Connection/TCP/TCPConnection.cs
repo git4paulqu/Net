@@ -23,9 +23,13 @@ namespace Net.TCP
             Initialize(NetDefine.DEFAUT_IONUM);
         }
 
-        protected override void OnReceiveAsyncCallback(RawMessage message)
+        protected override void ResetSocket()
         {
-            onReceiveCallback.SafeInvoke(message);
+            if (null != socket)
+            {
+                socket.Shutdown(SocketShutdown.Both);
+            }
+            base.ResetSocket();
         }
 
         protected override bool OnSend(byte[] buffer, int offset, int count, byte[] data, out int packCount)
@@ -71,11 +75,6 @@ namespace Net.TCP
             return true;
         }
 
-        protected override bool IsCanSend()
-        {
-            return connected;
-        }
-
         public bool connected
         {
             get
@@ -88,7 +87,12 @@ namespace Net.TCP
             }
         }
 
-        public NetRecevieEventCallback onReceiveCallback { get; set; }
+        protected override bool ready4Send
+        {
+            get {
+                return connected;
+            }
+        }
 
         protected TCPSetting setting;
     }

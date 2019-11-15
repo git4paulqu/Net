@@ -20,5 +20,10 @@ namespace Net
                 }
             return remotePoint;
         }
+
+        public static string FormatIPEndPoint(string host, int port)
+        {
+            return string.Format("{0}:{1}", host, port);
+        }
     }
 }

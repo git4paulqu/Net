@@ -6,13 +6,11 @@ namespace Net.Test.TCP
     {
         public void Start()
         {
-            uid = Util.GetUID().ToString();
-
             TCPSetting clientSetting = TestDefine.GetTCPSetting();
             client = new TCPClient(clientSetting);
             client.onConnectCallback += OnConnected;
             client.onConnectFailedCallback += OnConnectedFail;
-            client.onDisConnectCallback += OnDisConnectCallback;
+            client.onClosedCallback += OnCloseCallback;
             client.onReceiveCallback += OnRevecie;
             client.Connect();
         }
@@ -20,20 +18,11 @@ namespace Net.Test.TCP
         public void Stop()
         {
             client.Close();
-            Util.ClientLog("Client:{0} closed.", uid);
         }
 
         private void OnConnected(INetEventObject message)
         {
             Util.ClientLog("Client:{0} OnConnected", uid);
-
-            for (int i = 0; i < 5; i++)
-            {
-                string content = string.Format("hello form {0} - {1}.", uid, i);
-                byte[] data = System.Text.Encoding.Default.GetBytes(content);
-                client.Send(data);
-            }
-           
         }
 
         private void OnConnectedFail(INetEventObject message)
@@ -41,9 +30,15 @@ namespace Net.Test.TCP
             Util.ClientLog("Client:{0} OnConnectedFail", uid);
         }
 
-        private void OnDisConnectCallback(INetEventObject message)
+        private void OnCloseCallback(INetEventObject message)
         {
-            Util.ClientLog("Client:{0} OnDisConnect", uid);
+            RawMessage msg = message as RawMessage;
+            string port = msg.data as string;
+            Util.ClientLog("Client OnClose port:{0} uid:{1} ", port, uid);
+            if (port != string.Empty)
+            {
+                TCPTest.OnClientClose(uid);
+            }
         }
 
         private void OnRevecie(RawMessage rawMessage)
@@ -56,6 +51,18 @@ namespace Net.Test.TCP
 
         public string uid { get; set; }
 
-        private TCPClient client;
+        public string local
+        {
+            get
+            {
+                if (null == client)
+                {
+                    return string.Empty;
+                }
+                return client.local;
+            }
+        }
+
+        public TCPClient client;
     }
 }

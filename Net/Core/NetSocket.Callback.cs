@@ -9,10 +9,6 @@ namespace Net
         {
             switch (saea.LastOperation)
             {
-                case SocketAsyncOperation.Disconnect:
-                    DisConnectAsyncCallback(saea);
-                    break;
-
                 case SocketAsyncOperation.Receive:
                     ReceiveAsyncCallback(saea);
                     break;
@@ -35,34 +31,10 @@ namespace Net
             }
         }
 
-        #region event
-
         protected virtual void OnSAEACompletedCallback(object sender, SocketAsyncEventArgs saea)
         {
 
         }
-
-        protected virtual void OnDisConnectAsyncCallback(Socket socket)
-        {
-            NetDebug.Log("OnDisConnectAsyncCallback");
-        }
-
-        protected virtual void OnSendAsyncCallback()
-        {
-
-        }
-
-        protected virtual void OnSendToAsyncCallback()
-        {
-
-        }
-
-        protected virtual void OnCloseCallback()
-        {
-
-        }
-
-        #endregion
 
         #region callback
 
@@ -84,7 +56,7 @@ namespace Net
             }
             catch (Exception ex)
             {
-
+                NetDebug.Log("[NetSocket] ReceiveAsync, error:{0}.", ex.Message.ToString());
             }
         }
 
@@ -95,9 +67,23 @@ namespace Net
 
         protected virtual void SendAsync(byte[] data)
         {
+            if (!ready4Send)
+            {
+                NetDebug.Log("[NetSocket] SendAsync, not ready for send.");
+                return;
+            }
+
             if (null == data || data.Length == 0)
             {
                 NetDebug.Log("[NetSocket] SendAsync, the data can not be null.");
+                return;
+            }
+
+            if (data.Length > NetDefine.MAX_MESSAGE_LENGTH)
+            {
+                NetDebug.Error("[Netsocket] SendAsync, the data length:{0} is greater message max length:{1}.",
+                               data.Length,
+                               NetDefine.MAX_MESSAGE_LENGTH);
                 return;
             }
 
@@ -106,7 +92,6 @@ namespace Net
             {
                 OnSend(saea, data);
                 bool willRaiseEvent = socket.SendAsync(saea);
-                //bool willRaiseEvent = socket.Send(data,  SocketFlags.None);
                 if (!willRaiseEvent)
                 {
                     SendAsyncCallback(saea);
@@ -114,22 +99,31 @@ namespace Net
             }
             catch (Exception ex)
             {
-
+                NetDebug.Log("[NetSocket] SendAsync, error:{0}.", ex.Message.ToString());
             }
         }
 
         protected virtual void SendToAsync(byte[] data)
         {
+            if (!ready4Send)
+            {
+                NetDebug.Log("[NetSocket] SendToAsync, not ready for send.");
+                return;
+            }
+
             if (null == data || data.Length == 0)
             {
                 NetDebug.Log("[NetSocket] SendAsync, the data can not be null.");
                 return;
             }
-        }
 
-        private void DisConnectAsyncCallback(SocketAsyncEventArgs saea)
-        {
-            OnDisConnectAsyncCallback(saea.AcceptSocket);
+            if (data.Length > NetDefine.MAX_MESSAGE_LENGTH)
+            {
+                NetDebug.Error("[Netsocket] SendToAsync, the data length:{0} is greater message max length:{1}.",
+                               data.Length,
+                               NetDefine.MAX_MESSAGE_LENGTH);
+                return;
+            }
         }
 
         private void ReceiveAsyncCallback(SocketAsyncEventArgs saea)
@@ -147,7 +141,10 @@ namespace Net
                     CloseSAEA(saea, receiveSAEAPool);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                NetDebug.Log("[NetSocket] ReceiveAsyncCallback, error:{0}.", ex.Message.ToString());
+            }
         }
 
         private void ReceiveFromAsyncCallback(SocketAsyncEventArgs saea)

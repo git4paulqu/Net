@@ -4,7 +4,7 @@ using System.Net.Sockets;
 
 namespace Net.TCP
 {
-    public class TCPClient : TCPConnection
+    public sealed class TCPClient : TCPConnection
     {
         public TCPClient(TCPSetting setting) : base(setting)
         {
@@ -15,6 +15,7 @@ namespace Net.TCP
         {
             NetDebug.Log("[TCPClient] Try to Connect {0}:{1}.", setting.host, setting.port);
 
+            remote = NetUtility.FormatIPEndPoint(setting.host, setting.port);
             Reset();
             ConnetAsync();
         }
@@ -22,26 +23,6 @@ namespace Net.TCP
         public void Send(byte[] data)
         {
             SendAsync(data);
-        }
-
-        protected override void OnClose()
-        {
-            base.OnClose();
-        }
-
-        protected override void ResetSocket()
-        {
-            if (null != socket)
-            {
-                socket.Shutdown(SocketShutdown.Both);
-            }
-            base.ResetSocket();
-        }
-
-        protected override void OnRecevieFaild(Socket socket)
-        {
-            base.OnRecevieFaild(socket);
-            Close();
         }
 
         protected override void OnSAEACompletedCallback(object sender, SocketAsyncEventArgs saea)
@@ -52,6 +33,12 @@ namespace Net.TCP
                     ConnectAsyncCallback(saea);
                     break;
             }
+        }
+
+        protected override void CloseSAEA(SocketAsyncEventArgs saea, SAEAPool pool = null)
+        {
+            base.CloseSAEA(saea, pool);
+            base.OnClose();
         }
 
         private void ConnetAsync()
@@ -119,8 +106,19 @@ namespace Net.TCP
             onConnectFailedCallback(null);
         }
 
+        public string local
+        {
+            get
+            {
+                if (!connected)
+                {
+                    return string.Empty;
+                }
+                return socket.LocalEndPoint.ToString();
+            }
+        }
+
         public NetEventCallback onConnectCallback { get; set; }
         public NetEventCallback onConnectFailedCallback { get; set; }
-        public NetEventCallback onDisConnectCallback { get; set; }
     }
 }

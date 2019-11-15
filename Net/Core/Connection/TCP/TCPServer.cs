@@ -6,11 +6,10 @@ using Net.TCP.Server;
 
 namespace Net.TCP
 {
-    public class TCPServer : TCPConnection
+    public sealed partial class TCPServer : TCPConnection
     {
         public TCPServer(TCPSetting setting) : base(setting)
         {
-
         }
 
         public void Listen()
@@ -45,6 +44,12 @@ namespace Net.TCP
             connection.Send(data);
         }
 
+        protected override void OnClose()
+        {
+            base.OnClose();
+            TryCloseConnection();
+        }
+
         protected override void OnSAEACompletedCallback(object sender, SocketAsyncEventArgs saea)
         {
             switch (saea.LastOperation)
@@ -55,7 +60,7 @@ namespace Net.TCP
             }
         }
 
-        protected virtual void AcceptAsync()
+        private void AcceptAsync()
         {
             SocketAsyncEventArgs saea = new SocketAsyncEventArgs();
             saea.Completed += new EventHandler<SocketAsyncEventArgs>(OnSAEACompleted);
@@ -75,17 +80,26 @@ namespace Net.TCP
                 {
                     OnAcceptCallback(saea.AcceptSocket);
                 }
-                AcceptAsync();
             }
             catch (Exception ex)
             {
                 NetDebug.Error("[TCPServer] AcceptAsyncCallback error:{0}.", ex.Message.ToString());
+            }
+            finally
+            {
+                AcceptAsync();
             }
         }
 
         private void OnConnectionRecevie(RawMessage message)
         {
             onReceiveCallback.SafeInvoke(message);
+        }
+
+        private void OnConnectionClosed(RawMessage message)
+        {
+            string remote = message.data as string;
+            TryRemoveConnection(remote);
         }
 
         private void OnAcceptCallback(Socket socket)
@@ -102,40 +116,48 @@ namespace Net.TCP
                 return;
             }
 
-            string remote = socket.RemoteEndPoint.ToString();
-            if (!map_remote2Connection.ContainsKey(remote))
+            lock (map_remote2Connection)
             {
-                CSConnection connection = new CSConnection(socket, OnConnectionRecevie);
-                map_remote2Connection.Add(remote, connection);
+                string remote = socket.RemoteEndPoint.ToString();
+                if (!map_remote2Connection.ContainsKey(remote))
+                {
+                    CSConnection connection = new CSConnection(socket);
+                    connection.onReceiveCallback += OnConnectionRecevie;
+                    connection.onClosedCallback += OnConnectionClosed;
+                    map_remote2Connection.Add(remote, connection);
+                }
             }
         }
 
-        private void TryRemoveConnection(Socket socket)
+        private void TryRemoveConnection(string remote)
         {
-            if (null == socket)
+            lock (map_remote2Connection)
             {
-                return;
-            }
-
-            string remote = socket.RemoteEndPoint.ToString();
-            CSConnection connection = null;
-            if (map_remote2Connection.TryGetValue(remote, out connection))
-            {
-                if (null != connection)
+                CSConnection connection = null;
+                if (map_remote2Connection.TryGetValue(remote, out connection))
                 {
-                    connection.Close();
-                }
-                map_remote2Connection.Remove(remote);
+                    map_remote2Connection.Remove(remote);
 
-                ClientDroppedMessage message = new ClientDroppedMessage();
-                message.remote = remote;
-                onConnectionDropped.SafeInvoke(message);
+                    ConnectionMessage message = new ConnectionMessage(remote);
+                    onConnectionDropped.SafeInvoke(message);
+                }
+            }
+        }
+
+        private void TryCloseConnection()
+        {
+            lock (map_remote2Connection)
+            {
+                foreach (var item in map_remote2Connection)
+                {
+                    item.Value.Close();
+                }
             }
         }
 
         public NetEventCallback onConnectionConnect { get; set; }
         public NetEventCallback onConnectionDropped { get; set; }
 
-        private Dictionary<string, CSConnection> map_remote2Connection = new Dictionary<string, CSConnection>();
+        public Dictionary<string, CSConnection> map_remote2Connection = new Dictionary<string, CSConnection>();
     }
 }
