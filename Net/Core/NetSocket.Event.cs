@@ -90,7 +90,7 @@ namespace Net
             SocketAsyncEventArgs saea = AllocSendSAEA();
             try
             {
-                OnSend(saea, data);
+                EncodeSend(saea, data);
                 bool willRaiseEvent = socket.SendAsync(saea);
                 if (!willRaiseEvent)
                 {
@@ -133,7 +133,7 @@ namespace Net
                 int read = saea.BytesTransferred;
                 if (read > 0 && saea.SocketError == SocketError.Success)
                 {
-                    OnReceive(saea);
+                    DecodeReceive(saea);
                     ReceiveAsync(saea);
                 }
                 else
@@ -198,7 +198,7 @@ namespace Net
             NetDebug.Log("Recycle Receive SAEA count:{0} --{1}", sendSAEAPool.count, GetType().ToString());
         }
 
-        private void OnSend(SocketAsyncEventArgs saea, byte[] data)
+        private void EncodeSend(SocketAsyncEventArgs saea, byte[] data)
         {
             try
             {
@@ -206,7 +206,7 @@ namespace Net
                 int offset = saea.Offset;
                 int count = data.Length;
                 int packCount = count;
-                if (OnSend(buffer, offset, count, data, out packCount))
+                if (EncodeSend(buffer, offset, count, data, out packCount))
                 {
                     saea.SetBuffer(offset, packCount);
                 }
@@ -221,7 +221,7 @@ namespace Net
             }
         }
 
-        private void OnReceive(SocketAsyncEventArgs saea)
+        private void DecodeReceive(SocketAsyncEventArgs saea)
         {
             try
             {
@@ -230,7 +230,7 @@ namespace Net
                 int count = saea.BytesTransferred;
 
                 int error = 0;
-                if (!OnReceive(buffer, offset, count, out error))
+                if (!DecodeReceive(buffer, offset, count, out error))
                 {
                     if (error > 0)
                     {

@@ -65,13 +65,13 @@ namespace Net
             ResetSocket();
         }
 
-        protected virtual bool OnSend(byte[] buffer, int offset, int count, byte[] data, out int packCount)
+        protected virtual bool EncodeSend(byte[] buffer, int offset, int count, byte[] data, out int packCount)
         {
             packCount = count;
             return false;
         }
 
-        protected virtual bool OnReceive(byte[] buffer, int offset, int count, out int error)
+        protected virtual bool DecodeReceive(byte[] buffer, int offset, int count, out int error)
         {
             error = 0;
             return false;

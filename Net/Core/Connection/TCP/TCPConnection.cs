@@ -23,16 +23,7 @@ namespace Net.TCP
             Initialize(NetDefine.DEFAUT_IONUM);
         }
 
-        protected override void ResetSocket()
-        {
-            if (null != socket)
-            {
-                socket.Shutdown(SocketShutdown.Both);
-            }
-            base.ResetSocket();
-        }
-
-        protected override bool OnSend(byte[] buffer, int offset, int count, byte[] data, out int packCount)
+        protected override bool EncodeSend(byte[] buffer, int offset, int count, byte[] data, out int packCount)
         {
             int MESSAGE_LENGTH_SIZE = NetDefine.MESSAGE_LENGTH_SIZE;
             byte[] length = System.BitConverter.GetBytes(data.Length);
@@ -42,7 +33,7 @@ namespace Net.TCP
             return true;
         }
 
-        protected override bool OnReceive(byte[] buffer, int offset, int count, out int error)
+        protected override bool DecodeReceive(byte[] buffer, int offset, int count, out int error)
         {
             error = 0;
             receiveBuffer.Copy(buffer, offset, count);
