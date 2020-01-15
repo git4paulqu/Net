@@ -27,10 +27,19 @@
     <ConsolePause>false</ConsolePause>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="protobuf-net">
+      <HintPath>libs\protobuf-net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Connection\UDP\UDPPacketFlags.cs" />
+    <Compile Include="Connection\UDP\UDPConnectionData.cs" />
+    <Compile Include="Connection\UDP\UDPInternalPacket.cs" />
+    <Compile Include="Connection\UDP\UDPPacket.cs" />
     <Compile Include="Connection\UDP\UDPConnection.cs" />
+    <Compile Include="Connection\UDP\UDPConnectionState.cs" />
+    <Compile Include="Connection\UDP\UDPPacketType.cs" />
     <Compile Include="Container\ThreadSafedQueue.cs" />
     <Compile Include="Container\ThreadSafedStack.cs" />
     <Compile Include="DynamicBuffer.cs" />
@@ -44,7 +53,7 @@
     <Compile Include="Event\INetEvent.cs" />
     <Compile Include="Event\INetEventObject.cs" />
     <Compile Include="Utility\NetDebug.cs" />
-    <Compile Include="Connection\TCP\TCPServer.cs" />
+    <Compile Include="Connection\TCP\Server\TCPServer.cs" />
     <Compile Include="Connection\TCP\TCPClient.cs" />
     <Compile Include="Connection\TCP\TCPConnection.cs" />
     <Compile Include="Connection\TCP\Server\CSConnection.cs" />

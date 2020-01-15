@@ -38,6 +38,7 @@
     <Compile Include="TCP\ServerProxy.cs" />
     <Compile Include="TCP\TCPTest.cs" />
     <Compile Include="TestDefine.cs" />
+    <Compile Include="UDP\UDPTest.cs" />
     <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>

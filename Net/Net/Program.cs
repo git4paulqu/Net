@@ -8,8 +8,10 @@ namespace Net
         {
             try
             {
-                TCPTest.Start();
-                InputHandle.Start();
+                //TCPTest.Start();
+                //InputHandle.Start();
+
+                UDP.UDPTest.Start();
             }
             catch (Exception ex)
             {

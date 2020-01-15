@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Sockets;
 
 namespace Net
@@ -60,9 +61,27 @@ namespace Net
             }
         }
 
-        protected virtual void ReceiveFromAsync()
+        protected virtual void ReceiveFromAsync(IPEndPoint endPoint)
         {
+            SocketAsyncEventArgs saea = AllocReceiveSAEA();
+            saea.RemoteEndPoint = endPoint;
+            ReceiveFromAsync(saea);
+        }
 
+        protected virtual void ReceiveFromAsync(SocketAsyncEventArgs saea)
+        {
+            try
+            {
+                bool willRaiseEvent = socket.ReceiveFromAsync(saea);
+                if (!willRaiseEvent)
+                {
+                    ReceiveFromAsyncCallback(saea);
+                }
+            }
+            catch (Exception ex)
+            {
+                NetDebug.Log("[NetSocket] ReceiveFromAsync, error:{0}.", ex.Message.ToString());
+            }
         }
 
         protected virtual void SendAsync(byte[] data)
@@ -103,17 +122,11 @@ namespace Net
             }
         }
 
-        protected virtual void SendToAsync(byte[] data)
+        protected virtual void SendToAsync(EndPoint endPoint, byte[] data)
         {
-            if (!ready4Send)
-            {
-                NetDebug.Log("[NetSocket] SendToAsync, not ready for send.");
-                return;
-            }
-
             if (null == data || data.Length == 0)
             {
-                NetDebug.Log("[NetSocket] SendAsync, the data can not be null.");
+                NetDebug.Log("[NetSocket] SendToAsync, the data can not be null.");
                 return;
             }
 
@@ -123,6 +136,22 @@ namespace Net
                                data.Length,
                                NetDefine.MAX_MESSAGE_LENGTH);
                 return;
+            }
+
+            SocketAsyncEventArgs saea = AllocSendSAEA();
+            try
+            {
+                EncodeSend(saea, data);
+                saea.RemoteEndPoint = endPoint;
+                bool willRaiseEvent = socket.SendToAsync(saea);
+                if (!willRaiseEvent)
+                {
+                    SendToAsyncCallback(saea);
+                }
+            }
+            catch (Exception ex)
+            {
+                NetDebug.Log("[NetSocket] SendToAsync, error:{0}.", ex.Message.ToString());
             }
         }
 
@@ -149,7 +178,23 @@ namespace Net
 
         private void ReceiveFromAsyncCallback(SocketAsyncEventArgs saea)
         {
-
+            try
+            {
+                int read = saea.BytesTransferred;
+                if (read > 0 && saea.SocketError == SocketError.Success)
+                {
+                    DecodeReceive(saea);
+                    ReceiveFromAsync(saea);
+                }
+                else
+                {
+                    CloseSAEA(saea, receiveSAEAPool);
+                }
+            }
+            catch (Exception ex)
+            {
+                NetDebug.Log("[NetSocket] ReceiveAsyncCallback, error:{0}.", ex.Message.ToString());
+            }
         }
 
         private void SendAsyncCallback(SocketAsyncEventArgs saea)
@@ -171,7 +216,19 @@ namespace Net
 
         private void SendToAsyncCallback(SocketAsyncEventArgs saea)
         {
-
+            try
+            {
+                int send = saea.BytesTransferred;
+                if (send <= 0 || saea.SocketError != SocketError.Success)
+                {
+                    CloseSAEA(saea, sendSAEAPool);
+                }
+                else
+                {
+                    RecycleSendSAEA(saea);
+                }
+            }
+            catch { }
         }
 
         #endregion
@@ -230,7 +287,7 @@ namespace Net
                 int count = saea.BytesTransferred;
 
                 int error = 0;
-                if (!DecodeReceive(buffer, offset, count, out error))
+                if (!DecodeReceive(buffer, offset, count, saea.RemoteEndPoint, out error))
                 {
                     if (error > 0)
                     {

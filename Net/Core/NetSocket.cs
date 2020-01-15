@@ -71,7 +71,7 @@ namespace Net
             return false;
         }
 
-        protected virtual bool DecodeReceive(byte[] buffer, int offset, int count, out int error)
+        protected virtual bool DecodeReceive(byte[] buffer, int offset, int count, EndPoint endPoint, out int error)
         {
             error = 0;
             return false;
@@ -114,9 +114,6 @@ namespace Net
         protected SAEAPool sendSAEAPool { get; private set; }
         protected SAEAPool receiveSAEAPool { get; private set; }
         protected DynamicBuffer receiveBuffer { get; private set; }
-
-        private EndPoint remoterPoint = new IPEndPoint(IPAddress.Any, 0);
-
         public NetRecevieEventCallback onReceiveCallback { get; set; }
         public NetRecevieEventCallback onClosedCallback { get; set; }
     }

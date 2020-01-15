@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Sockets;
 
 namespace Net.TCP
@@ -33,7 +34,7 @@ namespace Net.TCP
             return true;
         }
 
-        protected override bool DecodeReceive(byte[] buffer, int offset, int count, out int error)
+        protected override bool DecodeReceive(byte[] buffer, int offset, int count, EndPoint endPoint, out int error)
         {
             error = 0;
             receiveBuffer.Copy(buffer, offset, count);
